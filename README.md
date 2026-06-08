@@ -87,7 +87,6 @@ python -m http.server 8080
 ## Kredit
 
 **M@I-2026** — BPS Kabupaten Rembang
-Kegiatan Sensus Ekonomi 2026 · Kabupaten Rembang, Jawa Tengah
 
 ---
 
