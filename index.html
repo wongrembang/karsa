@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIMAK-UMKM — Sistem Informasi Mapping UMKM Kabupaten Rembang</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!-- PapaParse -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --bg3:       #1e2530;
+  --border:    #30363d;
+  --accent:    #e6a817;
+  --accent2:   #f0c040;
+  --accent-dim:#7a5800;
+  --text:      #e6edf3;
+  --text2:     #8b949e;
+  --text3:     #656d76;
+  --green:     #3fb950;
+  --blue:      #58a6ff;
+  --red:       #f85149;
+  --purple:    #bc8cff;
+  --teal:      #39d0c4;
+  --radius:    10px;
+  --shadow:    0 4px 24px rgba(0,0,0,0.4);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-badge {
+  background: var(--accent);
+  color: #000;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.logo-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 1px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity:1; } 50% { opacity:0.4; }
+}
+
+/* ── NAV TABS ── */
+.nav-tabs {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex;
+  gap: 4px;
+}
+
+.nav-tab {
+  padding: 12px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.nav-tab:hover { color: var(--text); }
+.nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.nav-tab .tab-icon { font-size: 15px; }
+
+/* ── MAIN CONTENT ── */
+.main { padding: 24px 28px; max-width: 1600px; margin: 0 auto; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── LOADING SCREEN ── */
+#loading-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  gap: 20px;
+}
+
+.loader-logo {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -1px;
+}
+
+.loader-bar {
+  width: 260px;
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.loader-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: loading 1.8s ease forwards;
+}
+
+@keyframes loading {
+  0% { width: 0%; }
+  60% { width: 75%; }
+  100% { width: 100%; }
+}
+
+.loader-text {
+  font-size: 13px;
+  color: var(--text2);
+}
+
+/* ── STAT CARDS ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.stat-card:hover { border-color: var(--accent-dim); }
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.stat-card.c1::before { background: var(--accent); }
+.stat-card.c2::before { background: var(--blue); }
+.stat-card.c3::before { background: var(--green); }
+.stat-card.c4::before { background: var(--purple); }
+.stat-card.c5::before { background: var(--teal); }
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+  font-family: 'DM Mono', monospace;
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 6px;
+}
+
+/* ── SECTION HEADER ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: '';
+  width: 3px; height: 16px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* ── CHARTS GRID ── */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.chart-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+
+.chart-card.full { grid-column: 1 / -1; }
+
+.chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.chart-wrap {
+  position: relative;
+  height: 280px;
+}
+
+.chart-wrap.tall { height: 360px; }
+
+/* ── TOP KECAMATAN ── */
+.kec-bars { display: flex; flex-direction: column; gap: 8px; }
+
+.kec-bar-item {
+  display: grid;
+  grid-template-columns: 110px 1fr 60px;
+  align-items: center;
+  gap: 10px;
+}
+
+.kec-bar-label {
+  font-size: 12px;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kec-bar-track {
+  height: 8px;
+  background: var(--bg3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.kec-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 4px;
+  transition: width 0.8s ease;
+}
+
+.kec-bar-val {
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  color: var(--text);
+  text-align: right;
+}
+
+/* ── TABLE ── */
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.filter-input, .filter-select {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filter-input { flex: 1; min-width: 240px; }
+.filter-input:focus, .filter-select:focus { border-color: var(--accent); }
+.filter-select { min-width: 180px; cursor: pointer; }
+.filter-select option { background: var(--bg2); }
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+.btn-primary:hover { background: var(--accent2); }
+
+.btn-outline {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+.table-wrap {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table thead th {
+  background: var(--bg3);
+  padding: 12px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.data-table thead th:hover { color: var(--accent); }
+.data-table thead th.sorted { color: var(--accent); }
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody tr:hover { background: var(--bg3); }
+
+.data-table tbody td {
+  padding: 11px 14px;
+  color: var(--text);
+  vertical-align: top;
+}
+
+.td-name { font-weight: 600; max-width: 200px; }
+.td-kbli {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+}
+.td-alamat { color: var(--text2); max-width: 220px; font-size: 12px; }
+.td-kategori { max-width: 160px; }
+.td-hp { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--blue); }
+
+.kbli-badge {
+  display: inline-block;
+  background: rgba(230,168,23,0.12);
+  color: var(--accent);
+  border: 1px solid rgba(230,168,23,0.3);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  white-space: nowrap;
+}
+
+.layer-badge {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.layer-L1 { background: rgba(63,185,80,0.12); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+.layer-L2 { background: rgba(88,166,255,0.12); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+.layer-L3 { background: rgba(188,140,255,0.12); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+
+.gmaps-link {
+  color: var(--blue);
+  text-decoration: none;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.gmaps-link:hover { text-decoration: underline; }
+
+.table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text2);
+  background: var(--bg2);
+}
+
+.pagination {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.page-btn {
+  width: 30px; height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.page-btn:hover { border-color: var(--accent); color: var(--accent); }
+.page-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+.page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── MAP ── */
+#map {
+  height: 580px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.map-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.map-legend {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+}
+.empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* ── ERROR BANNER ── */
+.error-banner {
+  background: rgba(248,81,73,0.1);
+  border: 1px solid rgba(248,81,73,0.3);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  color: var(--red);
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .main { padding: 16px; }
+  .topbar { padding: 0 16px; }
+  .nav-tabs { padding: 0 16px; overflow-x: auto; }
+}
+</style>
+</head>
+<body>
+
+<!-- Upload Screen -->
+<div id="loading-screen">
+  <div class="loader-logo">SIMAK-UMKM</div>
+  <div style="font-size:13px;color:var(--text2);margin-bottom:28px;">Sistem Informasi Mapping UMKM — BPS Kab. Rembang</div>
+
+  <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;justify-content:center;max-width:780px;">
+
+    <!-- Upload Zone -->
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+      <div id="upload-zone"
+        onclick="document.getElementById('csv-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+        ondragleave="this.style.borderColor='var(--border)'"
+        ondrop="handleDrop(event)"
+        style="width:300px;border:2px dashed var(--border);border-radius:12px;
+               padding:32px 24px;text-align:center;cursor:pointer;
+               transition:border-color 0.2s;background:var(--bg2);">
+        <div style="font-size:36px;margin-bottom:12px">📂</div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Upload File CSV</div>
+        <div style="font-size:12px;color:var(--text2);">Drag & drop atau klik untuk pilih file</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;">Format: .csv (UTF-8)</div>
+      </div>
+      <input type="file" id="csv-input" accept=".csv" style="display:none" onchange="handleFileInput(event)">
+
+      <!-- Tombol download template -->
+      <button onclick="downloadTemplate()"
+        style="width:300px;padding:10px 16px;background:transparent;
+               border:1px solid var(--accent);border-radius:8px;
+               color:var(--accent);font-family:inherit;font-size:13px;
+               font-weight:600;cursor:pointer;display:flex;
+               align-items:center;justify-content:center;gap:8px;
+               transition:background 0.2s;"
+        onmouseover="this.style.background='rgba(230,168,23,0.1)'"
+        onmouseout="this.style.background='transparent'">
+        ⬇ Download Template CSV
+      </button>
+    </div>
+
+    <!-- Info kolom -->
+    <div style="width:300px;background:var(--bg2);border:1px solid var(--border);
+                border-radius:12px;padding:20px;">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px;
+                  text-transform:uppercase;letter-spacing:0.6px;">
+        📋 Kolom yang Dibutuhkan
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--accent);font-family:'DM Mono',monospace;">Nama Usaha</span>
+          <span style="color:var(--text3);">wajib</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--accent);font-family:'DM Mono',monospace;">Alamat</span>
+          <span style="color:var(--text3);">wajib</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--accent);font-family:'DM Mono',monospace;">Kode KBLI</span>
+          <span style="color:var(--text3);">wajib</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--accent);font-family:'DM Mono',monospace;">Nama KBLI</span>
+          <span style="color:var(--text3);">wajib</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--accent);font-family:'DM Mono',monospace;">Kategori KBLI</span>
+          <span style="color:var(--text3);">wajib</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--text2);font-family:'DM Mono',monospace;">No Telepon</span>
+          <span style="color:var(--text3);">opsional</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--text2);font-family:'DM Mono',monospace;">Google Maps Link</span>
+          <span style="color:var(--text3);">opsional*</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid var(--bg3);">
+          <span style="color:var(--text2);font-family:'DM Mono',monospace;">Rating</span>
+          <span style="color:var(--text3);">opsional</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:4px 0;">
+          <span style="color:var(--text2);font-family:'DM Mono',monospace;">Layer Klasifikasi</span>
+          <span style="color:var(--text3);">opsional</span>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:10px;color:var(--text3);line-height:1.5;">
+        * Google Maps Link diperlukan untuk menampilkan titik koordinat di peta
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-progress" style="display:none;margin-top:24px;text-align:center;">
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+    <div class="loader-text" id="loader-msg" style="margin-top:8px;">Memproses...</div>
+  </div>
+
+  <div style="margin-top:28px;font-size:11px;color:var(--text3);">
+    Data tidak dikirim ke server — diproses langsung di browser
+  </div>
+  <div style="margin-top:6px;font-size:11px;color:var(--text3);">
+    © M@I-2026 · BPS Kabupaten Rembang · SE2026
+  </div>
+</div>
+
+<!-- Topbar -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-badge">SE2026</div>
+    <div>
+      <div class="logo-title">SIMAK-UMKM Rembang</div>
+      <div class="logo-sub">Sistem Informasi Mapping UMKM — BPS Kab. Rembang</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div style="font-size:11px;color:var(--text3);margin-right:8px;">M@I-2026</div>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      <span id="data-count">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- Nav Tabs -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('dashboard')" id="tab-dashboard">
+    <span class="tab-icon">📊</span> Dashboard
+  </div>
+  <div class="nav-tab" onclick="switchTab('tabel')" id="tab-tabel">
+    <span class="tab-icon">📋</span> Data UMKM
+  </div>
+  <div class="nav-tab" onclick="switchTab('peta')" id="tab-peta">
+    <span class="tab-icon">🗺️</span> Peta Sebaran
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+  <div class="error-banner" id="error-banner">
+    ⚠️ <strong>Gagal memproses CSV.</strong> Pastikan file yang diupload adalah <code>karsa_umkm_rembang.csv</code> dengan format yang benar (header: Nama Usaha, Alamat, Kode KBLI, dst).
+  </div>
+
+  <!-- ── PAGE: DASHBOARD ── -->
+  <div class="page active" id="page-dashboard">
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card c1">
+        <div class="stat-label">Total UMKM</div>
+        <div class="stat-value" id="s-total">—</div>
+        <div class="stat-sub">Kabupaten Rembang</div>
+      </div>
+      <div class="stat-card c2">
+        <div class="stat-label">Kecamatan</div>
+        <div class="stat-value" id="s-kec">14</div>
+        <div class="stat-sub">Seluruh kecamatan</div>
+      </div>
+      <div class="stat-card c3">
+        <div class="stat-label">Kategori KBLI</div>
+        <div class="stat-value" id="s-kbli">—</div>
+        <div class="stat-sub">Lapangan usaha</div>
+      </div>
+      <div class="stat-card c4">
+        <div class="stat-label">Terklasifikasi AI</div>
+        <div class="stat-value" id="s-ai">—</div>
+        <div class="stat-sub">Layer L3 Claude</div>
+      </div>
+      <div class="stat-card c5">
+        <div class="stat-label">Ada No. HP</div>
+        <div class="stat-value" id="s-hp">—</div>
+        <div class="stat-sub">Dari total UMKM</div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <!-- Bar chart: per kecamatan -->
+      <div class="chart-card">
+        <div class="chart-title">📍 Distribusi per Kecamatan</div>
+        <div class="chart-wrap"><canvas id="chart-kec"></canvas></div>
+      </div>
+
+      <!-- Doughnut: kategori KBLI -->
+      <div class="chart-card">
+        <div class="chart-title">🏭 Komposisi Kategori KBLI</div>
+        <div class="chart-wrap"><canvas id="chart-kbli"></canvas></div>
+      </div>
+
+      <!-- Bar: Top 10 KBLI terbanyak -->
+      <div class="chart-card full">
+        <div class="chart-title">🔝 Top 10 Kode KBLI Terbanyak</div>
+        <div class="chart-wrap tall"><canvas id="chart-top-kbli"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Bar per kecamatan manual -->
+    <div class="chart-card" style="margin-bottom:24px;">
+      <div class="chart-title">📊 Jumlah UMKM per Kecamatan</div>
+      <div class="kec-bars" id="kec-bars"></div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: TABEL ── -->
+  <div class="page" id="page-tabel">
+    <div class="filter-bar">
+      <input type="text" class="filter-input" id="search-input" placeholder="🔍  Cari nama usaha, alamat, KBLI...">
+      <select class="filter-select" id="filter-kec">
+        <option value="">Semua Kecamatan</option>
+      </select>
+      <select class="filter-select" id="filter-kategori">
+        <option value="">Semua Kategori KBLI</option>
+      </select>
+      <select class="filter-select" id="filter-layer">
+        <option value="">Semua Layer</option>
+        <option value="L1">L1 - Keyword</option>
+        <option value="L2">L2 - Fuzzy</option>
+        <option value="L3">L3 - Claude AI</option>
+      </select>
+      <button class="btn btn-primary" onclick="exportFiltered()">⬇ Export CSV</button>
+      <button class="btn btn-outline" onclick="resetFilters()">✕ Reset</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th onclick="sortTable('No')">#</th>
+            <th onclick="sortTable('Nama Usaha')">Nama Usaha</th>
+            <th onclick="sortTable('Kode KBLI')">Kode KBLI</th>
+            <th onclick="sortTable('Nama KBLI')">Nama KBLI</th>
+            <th onclick="sortTable('Kategori KBLI')">Kategori</th>
+            <th onclick="sortTable('Alamat')">Alamat</th>
+            <th onclick="sortTable('No Telepon')">No. HP</th>
+            <th>GMaps</th>
+            <th onclick="sortTable('Layer Klasifikasi')">Layer</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+      <div class="table-footer">
+        <span id="table-info">—</span>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: PETA ── -->
+  <div class="page" id="page-peta">
+    <div class="map-controls">
+      <select class="filter-select" id="map-filter-kec">
+        <option value="">Semua Kecamatan</option>
+      </select>
+      <select class="filter-select" id="map-filter-kategori">
+        <option value="">Semua Kategori</option>
+      </select>
+      <button class="btn btn-primary" onclick="refreshMap()">🔄 Tampilkan</button>
+      <button class="btn btn-outline" id="btn-reset-excluded" onclick="resetExcluded()" style="display:none;color:var(--red);border-color:var(--red);">↩ Tampilkan Kembali (0)</button>
+      <span id="map-count" style="font-size:13px;color:var(--text2);margin-left:8px;"></span>
+    </div>
+    <div id="map"></div>
+    <div class="map-legend" id="map-legend"></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let allData = [];
+let filteredData = [];
+let currentPage = 1;
+const PAGE_SIZE = 50;
+let sortCol = '';
+let sortDir = 1;
+let mapInstance = null;
+let mapMarkers = null;
+let excludedKeys = new Set(JSON.parse(localStorage.getItem('simak_excluded') || '[]'));
+
+// ── KECAMATAN EXTRACTION ───────────────────────────────────────────────────
+const KEC_14 = ['Rembang','Kaliori','Sulang','Bulu','Gunem','Sale','Sarang','Sedan','Pamotan','Kragan','Sluke','Lasem','Pancur','Sumber'];
+
+function extractKec(alamat) {
+  if (!alamat) return '';
+  const m = alamat.match(/Kec\.\s+([A-Za-z]+)/);
+  if (m) return m[1];
+  // fallback
+  const found = KEC_14.filter(k => new RegExp('\\b' + k + '\\b', 'i').test(alamat));
+  if (!found.length) return '';
+  if (found.length === 1) return found[0];
+  const filtered = found.filter(k => k !== 'Rembang');
+  return filtered.length ? filtered[0] : 'Rembang';
+}
+
+// ── COLORS ────────────────────────────────────────────────────────────────
+const CAT_COLORS = [
+  '#e6a817','#58a6ff','#3fb950','#bc8cff','#39d0c4',
+  '#f85149','#ffa657','#79c0ff','#56d364','#d2a8ff',
+  '#a5d6ff','#ffb3c1','#ffd700','#b0e0e6','#98fb98',
+  '#dda0dd','#f4a460','#87ceeb','#ff6b9d'
+];
+
+const KECColors = {};
+KEC_14.forEach((k, i) => {
+  const hue = (i * 360 / 14 + 20) % 360;
+  KECColors[k] = `hsl(${hue}, 65%, 55%)`;
+});
+
+// ── LOAD CSV ──────────────────────────────────────────────────────────────
+function downloadTemplate() {
+  const headers = [
+    'No','Nama Usaha','Kategori','Alamat','No Telepon','Rating',
+    'Jumlah Review','Google Maps Link','Keyword Pencarian',
+    'Tanggal Scraping','Kode KBLI','Nama KBLI','Kategori KBLI','Layer Klasifikasi'
+  ];
+  const exampleRow = [
+    '1','Toko Contoh Jaya','Toko Kelontong',
+    'Jl. Pemuda No.1, Magersari, Kec. Rembang, Kabupaten Rembang, Jawa Tengah 59211',
+    '08123456789','4.5','12',
+    'https://www.google.com/maps/place/Toko+Contoh/@-6.7115,111.3422,17z',
+    'toko kelontong rembang','2025-01-01',
+    '47111','Perdagangan Eceran Berbagai Macam Barang',
+    'G - Perdagangan Besar dan Eceran; Reparasi Kendaraan','L1'
+  ];
+  const rows = [
+    headers.join(','),
+    exampleRow.map(v => `"${v}"`).join(',')
+  ];
+  const blob = new Blob(['﻿' + rows.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'template_simak_umkm.csv';
+  a.click();
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function handleFileInput(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  if (!file.name.endsWith('.csv')) {
+    alert('Harap upload file .csv');
+    return;
+  }
+  document.getElementById('upload-zone').style.display = 'none';
+  document.getElementById('upload-progress').style.display = 'block';
+  document.getElementById('loader-msg').textContent = `Memproses ${file.name}...`;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      allData = results.data.map(r => ({
+        ...r,
+        _kec: extractKec(r['Alamat'] || '')
+      }));
+      document.getElementById('loader-msg').textContent = `${allData.length.toLocaleString('id')} UMKM dimuat ✓`;
+      setTimeout(() => {
+        document.getElementById('loading-screen').style.display = 'none';
+        initApp();
+      }, 700);
+    },
+    error: function(err) {
+      document.getElementById('loading-screen').style.display = 'none';
+      document.getElementById('error-banner').style.display = 'block';
+      console.error('CSV error:', err);
+    }
+  });
+}
+
+function loadCSV() {
+  // Mode upload — tidak auto-load, tunggu user upload file
+  // Loading screen sudah tampil sebagai upload zone
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+function initApp() {
+  // Stats
+  const total = allData.length;
+  const kbliSet = new Set(allData.map(r => r['Kategori KBLI']).filter(Boolean));
+  const aiCount = allData.filter(r => (r['Layer Klasifikasi']||'').includes('L3')).length;
+  const hpCount = allData.filter(r => r['No Telepon'] && r['No Telepon'].trim()).length;
+
+  document.getElementById('s-total').textContent = total.toLocaleString('id');
+  document.getElementById('s-kbli').textContent = kbliSet.size;
+  document.getElementById('s-ai').textContent = aiCount.toLocaleString('id');
+  document.getElementById('s-hp').textContent = hpCount.toLocaleString('id');
+  document.getElementById('data-count').textContent = `${total.toLocaleString('id')} UMKM`;
+
+  buildDashboard();
+  populateFilters();
+  filteredData = [...allData];
+  renderTable();
+  initMap();
+  updateResetBtn();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
+function buildDashboard() {
+  // Per kecamatan count
+  const kecCount = {};
+  KEC_14.forEach(k => kecCount[k] = 0);
+  allData.forEach(r => { if (r._kec && kecCount[r._kec] !== undefined) kecCount[r._kec]++; });
+
+  const kecLabels = KEC_14;
+  const kecVals = KEC_14.map(k => kecCount[k]);
+  const maxKec = Math.max(...kecVals);
+
+  // Bar: per kecamatan
+  const ctxKec = document.getElementById('chart-kec').getContext('2d');
+  new Chart(ctxKec, {
+    type: 'bar',
+    data: {
+      labels: kecLabels,
+      datasets: [{
+        data: kecVals,
+        backgroundColor: kecLabels.map(k => KECColors[k] + 'cc'),
+        borderColor: kecLabels.map(k => KECColors[k]),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b949e', font: { size: 10 } }, grid: { color: '#30363d' } },
+        y: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#30363d' } }
+      }
+    }
+  });
+
+  // Doughnut: kategori KBLI
+  const katCount = {};
+  allData.forEach(r => {
+    const k = r['Kategori KBLI'] || 'Lainnya';
+    katCount[k] = (katCount[k] || 0) + 1;
+  });
+  const katLabels = Object.keys(katCount).sort((a,b) => katCount[b]-katCount[a]);
+  const katVals = katLabels.map(k => katCount[k]);
+  const shortLabels = katLabels.map(l => l.replace(/^[A-Z] - /, '').substring(0, 28));
+
+  const ctxKbli = document.getElementById('chart-kbli').getContext('2d');
+  new Chart(ctxKbli, {
+    type: 'doughnut',
+    data: {
+      labels: shortLabels,
+      datasets: [{
+        data: katVals,
+        backgroundColor: CAT_COLORS.slice(0, katLabels.length),
+        borderColor: '#161b22',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#8b949e', font: { size: 10 }, boxWidth: 12, padding: 8 }
+        }
+      }
+    }
+  });
+
+  // Top 10 KBLI kode
+  const kbliCount = {};
+  allData.forEach(r => {
+    const k = r['Kode KBLI'];
+    if (k) kbliCount[k] = (kbliCount[k] || 0) + 1;
+  });
+  const top10 = Object.entries(kbliCount).sort((a,b) => b[1]-a[1]).slice(0,10);
+  const kbliNames = {};
+  allData.forEach(r => { if (r['Kode KBLI']) kbliNames[r['Kode KBLI']] = r['Nama KBLI'] || r['Kode KBLI']; });
+
+  const ctxTop = document.getElementById('chart-top-kbli').getContext('2d');
+  new Chart(ctxTop, {
+    type: 'bar',
+    data: {
+      labels: top10.map(([k]) => k + ' - ' + (kbliNames[k]||'').substring(0,35)),
+      datasets: [{
+        data: top10.map(([,v]) => v),
+        backgroundColor: '#e6a81799',
+        borderColor: '#e6a817',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#30363d' } },
+        y: { ticks: { color: '#e6edf3', font: { size: 11 } }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Manual kec bars
+  const sorted = KEC_14.map(k => [k, kecCount[k]]).sort((a,b) => b[1]-a[1]);
+  const barsEl = document.getElementById('kec-bars');
+  barsEl.innerHTML = sorted.map(([k, v]) => `
+    <div class="kec-bar-item">
+      <div class="kec-bar-label">Kec. ${k}</div>
+      <div class="kec-bar-track">
+        <div class="kec-bar-fill" style="width:${(v/maxKec*100).toFixed(1)}%"></div>
+      </div>
+      <div class="kec-bar-val">${v.toLocaleString('id')}</div>
+    </div>
+  `).join('');
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────────────
+function populateFilters() {
+  const kecs = KEC_14.filter(k => allData.some(r => r._kec === k));
+  const kats = [...new Set(allData.map(r => r['Kategori KBLI']).filter(Boolean))].sort();
+
+  ['filter-kec', 'map-filter-kec'].forEach(id => {
+    const el = document.getElementById(id);
+    kecs.forEach(k => el.innerHTML += `<option value="${k}">Kec. ${k}</option>`);
+  });
+
+  ['filter-kategori', 'map-filter-kategori'].forEach(id => {
+    const el = document.getElementById(id);
+    kats.forEach(k => el.innerHTML += `<option value="${k}">${k}</option>`);
+  });
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────
+function applyFilters() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const kec = document.getElementById('filter-kec').value;
+  const kat = document.getElementById('filter-kategori').value;
+  const layer = document.getElementById('filter-layer').value;
+
+  filteredData = allData.filter(r => {
+    if (kec && r._kec !== kec) return false;
+    if (kat && r['Kategori KBLI'] !== kat) return false;
+    if (layer && !(r['Layer Klasifikasi']||'').includes(layer)) return false;
+    if (search) {
+      const hay = [r['Nama Usaha'], r['Alamat'], r['Kode KBLI'], r['Nama KBLI'], r['Kategori KBLI']].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  currentPage = 1;
+  renderTable();
+}
+
+function resetFilters() {
+  document.getElementById('search-input').value = '';
+  document.getElementById('filter-kec').value = '';
+  document.getElementById('filter-kategori').value = '';
+  document.getElementById('filter-layer').value = '';
+  applyFilters();
+}
+
+// debounce search
+let searchTimer;
+document.getElementById('search-input').addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(applyFilters, 280);
+});
+['filter-kec','filter-kategori','filter-layer'].forEach(id => {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+
+function sortTable(col) {
+  if (sortCol === col) sortDir *= -1;
+  else { sortCol = col; sortDir = 1; }
+  filteredData.sort((a, b) => {
+    const av = a[col] || '', bv = b[col] || '';
+    return av.localeCompare(bv, 'id') * sortDir;
+  });
+  currentPage = 1;
+  renderTable();
+}
+
+function renderTable() {
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const slice = filteredData.slice(start, start + PAGE_SIZE);
+  const tbody = document.getElementById('table-body');
+
+  if (!slice.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="icon">🔍</div><p>Tidak ada data yang cocok</p></div></td></tr>`;
+  } else {
+    tbody.innerHTML = slice.map((r, i) => {
+      const layer = (r['Layer Klasifikasi'] || '').trim();
+      const layerClass = layer.startsWith('L3') ? 'L3' : layer.startsWith('L2') ? 'L2' : 'L1';
+      const gmaps = r['Google Maps Link'] ? `<a class="gmaps-link" href="${r['Google Maps Link']}" target="_blank">🔗 Buka</a>` : '—';
+      return `<tr>
+        <td style="color:var(--text3);font-size:11px;font-family:'DM Mono',monospace">${start+i+1}</td>
+        <td class="td-name">${r['Nama Usaha'] || '—'}</td>
+        <td><span class="kbli-badge">${r['Kode KBLI'] || '—'}</span></td>
+        <td style="font-size:12px;max-width:180px;color:var(--text2)">${r['Nama KBLI'] || '—'}</td>
+        <td class="td-kategori" style="font-size:11px;color:var(--text2)">${(r['Kategori KBLI']||'—').replace(/^[A-Z] - /,'')}</td>
+        <td class="td-alamat">${r['Alamat'] || '—'}</td>
+        <td class="td-hp">${r['No Telepon'] || '—'}</td>
+        <td>${gmaps}</td>
+        <td><span class="layer-badge layer-${layerClass}">${layer || '—'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Info
+  const total = filteredData.length;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  document.getElementById('table-info').textContent =
+    `Menampilkan ${Math.min(start+1, total)}–${Math.min(start+PAGE_SIZE, total)} dari ${total.toLocaleString('id')} usaha`;
+
+  // Pagination
+  const pag = document.getElementById('pagination');
+  pag.innerHTML = '';
+  const addBtn = (label, page, disabled, active) => {
+    const btn = document.createElement('button');
+    btn.className = 'page-btn' + (active ? ' active' : '');
+    btn.textContent = label;
+    btn.disabled = disabled;
+    if (!disabled) btn.onclick = () => { currentPage = page; renderTable(); };
+    pag.appendChild(btn);
+  };
+
+  addBtn('‹', currentPage-1, currentPage===1, false);
+  const range = [];
+  if (totalPages <= 7) {
+    for (let i=1;i<=totalPages;i++) range.push(i);
+  } else {
+    range.push(1);
+    if (currentPage > 3) range.push('…');
+    for (let i=Math.max(2,currentPage-1); i<=Math.min(totalPages-1,currentPage+1); i++) range.push(i);
+    if (currentPage < totalPages-2) range.push('…');
+    range.push(totalPages);
+  }
+  range.forEach(p => {
+    if (p === '…') { const s=document.createElement('span'); s.textContent='…'; s.style.color='var(--text3)'; s.style.padding='0 4px'; pag.appendChild(s); }
+    else addBtn(p, p, false, p===currentPage);
+  });
+  addBtn('›', currentPage+1, currentPage===totalPages, false);
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────
+function exportFiltered() {
+  if (!filteredData.length) return;
+  const cols = Object.keys(filteredData[0]).filter(k => k !== '_kec');
+  const rows = [cols.join(',')];
+  filteredData.forEach(r => {
+    rows.push(cols.map(c => `"${(r[c]||'').replace(/"/g,'""')}"`).join(','));
+  });
+  const blob = new Blob(['\uFEFF' + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `KARSA_UMKM_export_${Date.now()}.csv`;
+  a.click();
+}
+
+// ── MAP ───────────────────────────────────────────────────────────────────
+function initMap() {
+  mapInstance = L.map('map', {
+    center: [-6.705, 111.34],
+    zoom: 11,
+    preferCanvas: true
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    maxZoom: 19
+  }).addTo(mapInstance);
+
+  mapMarkers = L.layerGroup().addTo(mapInstance);
+  refreshMap();
+}
+
+function getLatLng(row) {
+  // Ekstrak koordinat dari berbagai format Google Maps URL
+  const url = row['Google Maps Link'] || '';
+  let m;
+  // Format 1: !3d{lat}!4d{lng} — format data= pada URL GMaps
+  m = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+  // Format 2: @lat,lng
+  m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+  // Format 3: ?q=lat,lng
+  m = url.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (m) return [parseFloat(m[1]), parseFloat(m[2])];
+  return null;
+}
+
+function refreshMap() {
+  if (!mapInstance) return;
+  mapMarkers.clearLayers();
+
+  const kec = document.getElementById('map-filter-kec').value;
+  const kat = document.getElementById('map-filter-kategori').value;
+
+  const mapData = allData.filter(r => {
+    if (kec && r._kec !== kec) return false;
+    if (kat && r['Kategori KBLI'] !== kat) return false;
+    return true;
+  });
+
+  // Kategori warna
+  const katList = [...new Set(allData.map(r => r['Kategori KBLI']).filter(Boolean))].sort();
+  const katColorMap = {};
+  katList.forEach((k, i) => katColorMap[k] = CAT_COLORS[i % CAT_COLORS.length]);
+
+  let plotted = 0;
+  let excluded = 0;
+  mapData.forEach(r => {
+    const latlng = getLatLng(r);
+    if (!latlng) return;
+    const key = r['Nama Usaha'] + '|' + (r['Google Maps Link'] || '');
+    if (excludedKeys.has(key)) { excluded++; return; }
+    const color = katColorMap[r['Kategori KBLI']] || '#e6a817';
+    const marker = L.circleMarker(latlng, {
+      radius: 6,
+      fillColor: color,
+      color: '#000',
+      weight: 1,
+      opacity: 0.8,
+      fillOpacity: 0.75
+    });
+    const popupId = 'popup_' + Math.random().toString(36).substr(2,8);
+    marker.bindPopup(`
+      <div id="${popupId}" style="font-family:'Plus Jakarta Sans',sans-serif;min-width:210px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px">${r['Nama Usaha']||'—'}</div>
+        <div style="font-size:11px;color:#666;margin-bottom:4px">${r['Kode KBLI']||''} · ${(r['Nama KBLI']||'').substring(0,40)}</div>
+        <div style="font-size:11px;margin-bottom:4px">📍 ${r['Alamat']||'—'}</div>
+        ${r['No Telepon'] ? `<div style="font-size:11px;margin-bottom:4px">📞 ${r['No Telepon']}</div>` : ''}
+        ${r['Google Maps Link'] ? `<a href="${r['Google Maps Link']}" target="_blank" style="font-size:11px;color:#58a6ff;display:block;margin-bottom:8px">🔗 Buka GMaps</a>` : ''}
+        <button onclick="excludeMarker('${key.replace(/'/g,"\\'")}','${popupId}')"
+          style="width:100%;padding:5px 10px;background:#f8514922;border:1px solid #f8514966;
+                 color:#f85149;border-radius:5px;font-size:11px;font-weight:700;
+                 cursor:pointer;font-family:inherit;">
+          🗑 Hapus dari Peta
+        </button>
+      </div>
+    `);
+    marker.addTo(mapMarkers);
+    plotted++;
+  });
+
+  const excMsg = excluded > 0 ? ` · <span style="color:#f85149">${excluded} disembunyikan</span>` : '';
+  document.getElementById('map-count').innerHTML =
+    `${plotted.toLocaleString('id')} dari ${mapData.length.toLocaleString('id')} titik ditampilkan${excMsg}`;
+
+  // Legend
+  const legend = document.getElementById('map-legend');
+  legend.innerHTML = katList.map(k => `
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${katColorMap[k]}"></div>
+      <span>${k.replace(/^[A-Z] - /,'').substring(0,30)}</span>
+    </div>
+  `).join('');
+}
+
+// ── TAB SWITCH ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+
+  if (tab === 'peta' && mapInstance) {
+    setTimeout(() => mapInstance.invalidateSize(), 100);
+  }
+}
+
+// ── EXCLUDE MARKER ───────────────────────────────────────────────────────
+function excludeMarker(key, popupId) {
+  excludedKeys.add(key);
+  localStorage.setItem('simak_excluded', JSON.stringify([...excludedKeys]));
+  mapInstance.closePopup();
+  refreshMap();
+  updateResetBtn();
+}
+
+function resetExcluded() {
+  if (!confirm('Tampilkan kembali semua titik yang disembunyikan?')) return;
+  excludedKeys.clear();
+  localStorage.removeItem('simak_excluded');
+  refreshMap();
+  updateResetBtn();
+}
+
+function updateResetBtn() {
+  const btn = document.getElementById('btn-reset-excluded');
+  if (!btn) return;
+  btn.style.display = excludedKeys.size > 0 ? 'flex' : 'none';
+  btn.textContent = `↩ Tampilkan Kembali (${excludedKeys.size})`;
+}
+
+// ── START ─────────────────────────────────────────────────────────────────
+// Tidak perlu loadCSV() — user upload manual via upload zone
+
+</script>
+</body>
+</html>
