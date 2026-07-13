@@ -86,7 +86,7 @@ python -m http.server 8080
 
 ## Kredit
 
-**M@I-2026** — BPS Kabupaten Rembang
+**M@I-2026** — pencari surga
 
 ---
 
